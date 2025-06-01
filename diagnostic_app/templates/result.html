@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Résultat du diagnostic</title>
+</head>
+<body>
+    <h1>Résultat du diagnostic</h1>
+    <p>Vous avez coché : {{ symptoms | join(", ") }}.</p>
+
+    <p><strong>Maladie détectée : {{ prediction }}</strong></p>
+
+    <a href="/">Faire un nouveau diagnostic</a>
+</body>
+</html>
