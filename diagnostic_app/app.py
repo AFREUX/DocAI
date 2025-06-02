@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request
 import joblib
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 app = Flask(__name__)
 CORS(app)
 
@@ -56,6 +56,7 @@ model = joblib.load('model.joblib')
 
 # 3. Route principale
 @app.route("/api/diagnosis", methods=["POST"])
+@cross_origin()
 def api_diagnosis():
     data = request.get_json(force=True)
     # data should look like: { "symptoms": ["itching","cough", ...] }
