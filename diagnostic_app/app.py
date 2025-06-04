@@ -1,11 +1,9 @@
+import pickle
 from flask import Flask, render_template, request
-import joblib
-from flask_cors import CORS, cross_origin
+
 app = Flask(__name__)
-CORS(app)
 
-
-# 1. Liste complète des symptômes
+# 1. List of symptoms
 SYMPTOMS = [
     "itching", "skin_rash", "nodal_skin_eruptions", "continuous_sneezing", 
     "shivering", "chills", "joint_pain", "stomach_pain", "acidity", 
@@ -50,56 +48,26 @@ DISEASES = [
     "Tuberculosis", "Typhoid", "Urinary tract infection", "Varicose veins", "hepatitis A"
 ]
 
-# 2. Chargement du modèle
-model = joblib.load('model.joblib')
 
 
-# 3. Route principale
-@app.route("/api/diagnosis", methods=["POST"])
-@cross_origin()
-def api_diagnosis():
-    data = request.get_json(force=True)
-    # data should look like: { "symptoms": ["itching","cough", ...] }
-    selected = data.get("symptoms", [])
-    
-    # 4. Construire le vecteur binaire (length = len(SYMPTOMS))
-    binary_vector = [1 if symp in selected else 0 for symp in SYMPTOMS]
-    
-    # 5. Faire la prédiction (model.predict attend une liste de vecteurs)
-    try:
-        pred_index = model.predict([binary_vector])[0]
-    except Exception as e:
-        return jsonify({
-            "disease": "Erreur modèle",
-            "description": f"Impossible de prédire : {str(e)}"
-        }), 500
-    
-    # 6. Nom de la maladie (vérifier l’index en sécurité)
-    if 0 <= pred_index < len(DISEASES):
-        disease_name = DISEASES[pred_index]
-    else:
-        disease_name = "Unknown Disease"
-    
-    # (Optionnel) Vous pouvez ajouter ici une description plus détaillée.
-    description = (
-        f"Le modèle suggère : « {disease_name} ». "
-        "Attention : ce diagnostic est généré automatiquement et n’est pas infaillible. "
-        "Il ne remplace pas une consultation médicale. Pour toute décision de santé, "
-        "veuillez toujours consulter un professionnel de la santé."
-        )
-    
-    return jsonify({
-        "disease": disease_name,
-        "description": description
-    })
+# 4. Main route
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        # Build the binary vector from the form data
+        user_symptoms = [1 if request.form.get(symptom) else 0 for symptom in SYMPTOMS]
 
+        # Prediction
+        prediction = model.predict([user_symptoms])[0]
+        
+        # Get the disease name based on the prediction
+        disease_name = DISEASES[prediction] if prediction < len(DISEASES) else "Unknown Disease"
+        
+        # Return the result along with the symptoms and disease name
+        return render_template("index.html", symptoms=SYMPTOMS, disease_name=disease_name)
 
-# --- (Optional) Si vous voulez encore conserver le formulaire HTML en GET/POST, vous pouvez garder votre ancienne route, 
-#     mais pour ce cas-là, on va juste renvoyer un simple message en GET. ---
-@app.route("/", methods=["GET"])
-def index_html():
-    return "<h2>Flask backend is running. Use POST /api/diagnosis</h2>"
-
+    # In GET method, just display the form
+    return render_template("index.html", symptoms=SYMPTOMS)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
