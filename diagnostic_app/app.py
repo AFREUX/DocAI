@@ -1,9 +1,11 @@
-import pickle
+import joblib
+from flask_cors import CORS
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
+CORS(app)  # active CORS si jamais vous appelez l'API depuis un autre domaine
 
-# 1. List of symptoms
+# 1. Liste complète des symptômes
 SYMPTOMS = [
     "itching", "skin_rash", "nodal_skin_eruptions", "continuous_sneezing", 
     "shivering", "chills", "joint_pain", "stomach_pain", "acidity", 
@@ -37,7 +39,7 @@ SYMPTOMS = [
     "blister", "red_sore_around_nose", "yellow_crust_ooze"
 ]
 
-# 2. List of disease names
+# 2. Liste des noms de maladies
 DISEASES = [
     "(vertigo) Paroymsal  Positional Vertigo", "AIDS", "Acne", "Alcoholic hepatitis", "Allergy",
     "Arthritis", "Bronchial Asthma", "Cervical spondylosis", "Chicken pox", "Chronic cholestasis",
@@ -48,26 +50,41 @@ DISEASES = [
     "Tuberculosis", "Typhoid", "Urinary tract infection", "Varicose veins", "hepatitis A"
 ]
 
+# 3. Chargement du modèle entraîné (même dossier que app.py)
+model = joblib.load('model.joblib')
 
 
-# 4. Main route
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        # Build the binary vector from the form data
-        user_symptoms = [1 if request.form.get(symptom) else 0 for symptom in SYMPTOMS]
+        # a. Construire le vecteur binaire d’entrée pour le modèle
+        user_symptoms_vector = [1 if request.form.get(symptom) else 0 for symptom in SYMPTOMS]
 
-        # Prediction
-        prediction = model.predict([user_symptoms])[0]
-        
-        # Get the disease name based on the prediction
-        disease_name = DISEASES[prediction] if prediction < len(DISEASES) else "Unknown Disease"
-        
-        # Return the result along with the symptoms and disease name
-        return render_template("index.html", symptoms=SYMPTOMS, disease_name=disease_name)
+        # b. Prédiction
+        prediction_index = model.predict([user_symptoms_vector])[0]
+        if 0 <= prediction_index < len(DISEASES):
+            disease_name = DISEASES[prediction_index]
+        else:
+            disease_name = "Unknown Disease"
 
-    # In GET method, just display the form
+        # c. Extraire la liste textuelle des symptômes cochés
+        #    (on remplace "_" par " " pour l’affichage)
+        checked_symptoms = [
+            SYMPTOMS[i].replace("_", " ")
+            for i, val in enumerate(user_symptoms_vector)
+            if val == 1
+        ]
+
+        # d. Renvoyer le rendu de result.html avec la liste des symptômes cochés + la maladie détectée
+        return render_template(
+            "result.html",
+            symptoms=checked_symptoms,
+            disease_name=disease_name
+        )
+
+    # En GET, on affiche seulement le formulaire
     return render_template("index.html", symptoms=SYMPTOMS)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

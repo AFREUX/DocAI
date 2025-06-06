@@ -12,16 +12,13 @@
             {% for symptom in symptoms %}
                 <div>
                     <input type="checkbox" id="{{ symptom }}" name="{{ symptom }}">
-                    <label for="{{ symptom }}">{{ symptom.replace("_", " ") | capitalize }}</label>
+                    <label for="{{ symptom }}">
+                        {{ symptom.replace("_", " ") | capitalize }}
+                    </label>
                 </div>
             {% endfor %}
         </fieldset>
         <button type="submit">Diagnostiquer</button>
     </form>
-
-    {% if prediction is defined %}
-        <h2>Résultat du diagnostic :</h2>
-        <p><strong>{{ prediction }}</strong></p>
-    {% endif %}
 </body>
 </html>
