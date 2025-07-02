@@ -58,6 +58,8 @@ model = joblib.load('model.joblib')
 #    ➜  Save your Excel as CSV named “precautions.csv”
 prec_df = pd.read_csv('precautions.csv')
 #    Build lookup: {"Disease": ["p1", "p2", ...]}
+desc_df = pd.read_csv('disease_descriptions.csv')
+descriptions = dict(zip(desc_df['Disease'], desc_df['Description'].fillna('')))
 precautions_lookup = (
     prec_df.set_index('Disease')
            .apply(lambda r: [r[c] for c in prec_df.columns[1:] if pd.notna(r[c])],
@@ -79,7 +81,7 @@ def index():
         disease_name = (DISEASES[prediction_index]
                         if 0 <= prediction_index < len(DISEASES)
                         else "Unknown Disease")
-
+        description = descriptions.get(disease_name) or "Description non disponible pour l’instant."
         # c. Précautions pour la maladie prédite ----------------------  <<< NEW >>>
         precautions = precautions_lookup.get(disease_name, [])
         # --------------------------------------------------------------
@@ -94,7 +96,8 @@ def index():
             "result.html",
             symptoms=checked_symptoms,
             disease_name=disease_name,
-            precautions=precautions        # <<< NEW >>>
+            precautions=precautions,
+            description=description       # <<< NEW >>>
         )
 
     return render_template("index.html", symptoms=SYMPTOMS)
