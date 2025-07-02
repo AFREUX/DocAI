@@ -1,13 +1,23 @@
-<!DOCTYPE html>
-<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Résultat du diagnostic</title>
+    …
+    <link rel="stylesheet" href="../static/style.css">
 </head>
 <body>
+<div class="container">
     <h1>Résultat du diagnostic</h1>
-    <p>Vous avez coché : {{ symptoms | join(", ") }}.</p>
-    <p><strong>Maladie détectée : {{ disease_name }}</strong></p>
-    <a href="/">Faire un nouveau diagnostic</a>
+
+    <p>Vous avez coché&nbsp;: {{ symptoms | join(", ") }}.</p>
+    <p><strong>Maladie détectée&nbsp;: {{ disease_name }}</strong></p>
+
+    {% if precautions %}
+        <h2>Précautions recommandées</h2>
+        <ul class="precautions">
+            {% for p in precautions %}
+                <li>{{ p|capitalize }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <p><a href="/">Faire un nouveau diagnostic</a></p>
+</div>
 </body>
-</html>

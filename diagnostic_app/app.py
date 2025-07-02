@@ -1,9 +1,10 @@
 import joblib
+import pandas as pd               # NEW
 from flask_cors import CORS
 from flask import Flask, render_template, request
 
-app = Flask(__name__)
-CORS(app)  # active CORS si jamais vous appelez l'API depuis un autre domaine
+app = Flask(__name__)              # fixed typo
+CORS(app)
 
 # 1. Liste complète des symptômes
 SYMPTOMS = [
@@ -53,38 +54,50 @@ DISEASES = [
 # 3. Chargement du modèle entraîné (même dossier que app.py)
 model = joblib.load('model.joblib')
 
+# 4. Chargement du fichier précautions  -------------------------------  <<< NEW >>>
+#    ➜  Save your Excel as CSV named “precautions.csv”
+prec_df = pd.read_csv('precautions.csv')
+#    Build lookup: {"Disease": ["p1", "p2", ...]}
+precautions_lookup = (
+    prec_df.set_index('Disease')
+           .apply(lambda r: [r[c] for c in prec_df.columns[1:] if pd.notna(r[c])],
+                  axis=1)
+           .to_dict()
+)
+# ---------------------------------------------------------------------
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        # a. Construire le vecteur binaire d’entrée pour le modèle
-        user_symptoms_vector = [1 if request.form.get(symptom) else 0 for symptom in SYMPTOMS]
+        # a. Vecteur binaire
+        user_symptoms_vector = [1 if request.form.get(symptom) else 0
+                                for symptom in SYMPTOMS]
 
         # b. Prédiction
         prediction_index = model.predict([user_symptoms_vector])[0]
-        if 0 <= prediction_index < len(DISEASES):
-            disease_name = DISEASES[prediction_index]
-        else:
-            disease_name = "Unknown Disease"
+        disease_name = (DISEASES[prediction_index]
+                        if 0 <= prediction_index < len(DISEASES)
+                        else "Unknown Disease")
 
-        # c. Extraire la liste textuelle des symptômes cochés
-        #    (on remplace "_" par " " pour l’affichage)
+        # c. Précautions pour la maladie prédite ----------------------  <<< NEW >>>
+        precautions = precautions_lookup.get(disease_name, [])
+        # --------------------------------------------------------------
+
+        # d. Symptômes cochés pour l’affichage
         checked_symptoms = [
             SYMPTOMS[i].replace("_", " ")
-            for i, val in enumerate(user_symptoms_vector)
-            if val == 1
+            for i, val in enumerate(user_symptoms_vector) if val
         ]
 
-        # d. Renvoyer le rendu de result.html avec la liste des symptômes cochés + la maladie détectée
         return render_template(
             "result.html",
             symptoms=checked_symptoms,
-            disease_name=disease_name
+            disease_name=disease_name,
+            precautions=precautions        # <<< NEW >>>
         )
 
-    # En GET, on affiche seulement le formulaire
     return render_template("index.html", symptoms=SYMPTOMS)
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
